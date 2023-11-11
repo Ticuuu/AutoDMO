@@ -1,0 +1,190 @@
+﻿using DMOAuto.lib;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace DMOAuto
+{
+    public delegate void UpdateMe(int a);
+
+    public delegate void Loge(string a);
+
+    public delegate void UpdateBit(Bitmap bt);
+
+    public partial class mainForm : Form
+    {
+        public mainForm()
+        {
+            InitializeComponent();
+            MyInit();
+
+        }
+
+        Boting bot;
+
+        protected int nowPId = -1;
+
+        public static UpdateMe uPD;
+        public static Loge uPL;
+        public static UpdateBit uPB;
+        private bool waitForMouseClick = false;
+
+        private void MyInit()
+        {
+            lblProId.Text = "Not active";
+            lblProId.ForeColor = Color.Red;
+            bot = Boting.GetInstance();
+            uPD = ChangeLabel;
+            uPL = OutLog;
+            uPB = UpdateImg;
+        }
+
+
+        public void ChangeLabel(int pId)
+        {
+            nowPId = pId;
+            if (pId == -1)
+            {
+                int resp = (int)MessageBox.Show("There is no game process.", "ERROR");
+                lblProId.Text = "Not active";
+                lblProId.ForeColor = Color.Red;
+            }
+            else
+            {
+                lblProId.Text = "Active " + nowPId.ToString();
+                lblProId.ForeColor = Color.Green;
+            }
+
+        }
+
+        public void UpdateImg(Bitmap bt)
+        {
+            if (pibMonster.InvokeRequired)
+            {
+                pibMonster.Invoke(new UpdateBit(UpdateImg), bt);
+            }
+            else
+            {
+                pibMonster.Image = (Image)bt;
+
+                //OutLog(bt.GetPixel(new Random().Next()%30, new Random().Next() % 30).ToString());
+                pibMonster.Update();
+                //bt.Dispose();
+            }
+        }
+
+        public void OutLog(String a)
+        {
+            if (txtBox.InvokeRequired)
+            {
+                txtBox.Invoke(new Loge(OutLog), a);
+            }
+            else {
+                txtBox.Text += a + "\r\n";
+                txtBox.SelectionStart = txtBox.Text.Length;
+                txtBox.ScrollToCaret();
+            }
+        }
+
+        public static void gogogo(string a)
+        {
+            MessageBox.Show(a, "gogogo");
+        }
+
+        private void ProSearch(object sender, EventArgs e)
+        {
+            try
+            {
+                int pId = ProcessHandler.GetProcess("DigimonMasters");
+                ProcessHandler.GetMyWindow(nowPId);
+            }
+            catch (Exception exp)
+            {
+                int resp = (int)MessageBox.Show("Some thing went wrong.", "ERROR");
+            }
+        }
+
+        private void AllStart(object sender, EventArgs e)
+        {
+            IntPtr ipt = ProcessHandler.GetMyWindow(nowPId);
+            OutLog("Iniciando Bot... " + ipt.ToString("x8"));
+            bot.Start();
+            OutLog("Bot inicado!");
+        }
+
+        private void AllStop(object sender, EventArgs e)
+        {
+            bot.cfg.state = false;
+        }
+
+        private void Mody(object sender, EventArgs e)
+        {
+            Button bt = (Button)sender;
+            int keycode = -1;
+            Consts.KEY_CODE.TryGetValue(bt.Text, out keycode);
+            bot.cfg.a = keycode;
+        }
+
+        private void SelectMonster(object sender, EventArgs e)
+        {
+
+            Bitmap bt = ProcessHandler.GetWindowImg();
+            Bitmap bbt = bt.Clone(Consts.MONSTER_RECT, bt.PixelFormat);
+            //string path = System.Windows.Forms.Application.StartupPath;
+            //Bitmap bt1 = bt.Clone(Consts.OBJECT_RECT, bt.PixelFormat);
+            //bt1.Save(path + "/1.bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+            bot.SetBit(bbt);
+            bot.cfg.monSelect = true;
+            bot.cfg.monAlive = true;
+            UpdateImg(bbt);
+            bt.Dispose();
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            // Set the flag to indicate that you are waiting for the next mouse click
+            waitForMouseClick = true;
+
+            // Subscribe to the MouseClick event
+            this.MouseClick += Form_MouseClick;
+        }
+
+        private void Form_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (waitForMouseClick)
+            {
+                // Get the coordinates of the mouse click
+                int mouseX = e.X;
+                int mouseY = e.Y;
+
+                txtX.Text = mouseX.ToString();
+                txtY.Text = mouseY.ToString();
+
+                Consts.MONSTER_RECT = new Rectangle(int.Parse(txtX.Text), int.Parse(txtY.Text), 40, 40);
+                // Reset the flag and unsubscribe from the MouseClick event
+                waitForMouseClick = false;
+                this.MouseClick -= Form_MouseClick;
+            }
+        }
+
+        private void mainForm_Load(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            Consts.MONSTER_RECT = new Rectangle(int.Parse(txtX.Text), int.Parse(txtY.Text), 40, 40);
+        }
+    }
+
+
+
+}
